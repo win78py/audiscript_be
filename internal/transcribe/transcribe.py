@@ -1,6 +1,5 @@
 import whisper
 import sys
-import urllib.request
 import os
 import uuid
 import tempfile

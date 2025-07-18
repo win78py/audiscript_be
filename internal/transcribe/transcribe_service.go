@@ -9,6 +9,8 @@ import (
 	"log"
 	"os/exec"
 	"strings"
+    "path/filepath"
+    "os"
 )
 
 type Service interface {
@@ -50,7 +52,11 @@ func (s *service) TranscribeStream(t *Audio, file io.Reader, filename string) er
 }
 
 func (s *service) callPythonTranscribe(audioURL string) (string, error) {
-    cmd := exec.Command("python3", "internal/transcribe/transcribe.py", audioURL)
+    // Lấy working directory hiện tại
+    wd, _ := os.Getwd()
+    scriptPath := filepath.Join(wd, "internal", "transcribe", "transcribe.py")
+
+    cmd := exec.Command("python3", scriptPath, audioURL)
     var out bytes.Buffer
     var stderr bytes.Buffer
     cmd.Stdout = &out
