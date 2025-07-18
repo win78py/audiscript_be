@@ -52,12 +52,12 @@ func (s *service) TranscribeStream(t *Audio, file io.Reader, filename string) er
 func (s *service) callPythonTranscribe(audioURL string) (string, error) {
     cmd := exec.Command("python3", "internal/transcribe/transcribe.py", audioURL)
     var out bytes.Buffer
+    var stderr bytes.Buffer
     cmd.Stdout = &out
-    cmd.Stderr = nil
+    cmd.Stderr = &stderr
     err := cmd.Run()
     if err != nil {
-        return "", fmt.Errorf("failed to run python script: %w", err)
+        return "", fmt.Errorf("failed to run python script: %w, stderr: %s", err, stderr.String())
     }
     return strings.TrimSpace(out.String()), nil
-    
 }

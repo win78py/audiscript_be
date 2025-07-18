@@ -7,7 +7,7 @@ RUN go build -o app ./cmd/api/main.go
 FROM debian:bookworm-slim
 
 # Cài Python3 và pip
-RUN apt-get update && apt-get install -y python3 python3-pip
+RUN apt-get update && apt-get install -y python3 python3-pip ffmpeg
 
 # Cài các thư viện Python cần thiết cho Whisper
 RUN pip3 install --no-cache-dir openai-whisper torch requests
