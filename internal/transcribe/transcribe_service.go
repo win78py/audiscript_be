@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 )
 
 type Service interface {
@@ -55,14 +56,21 @@ func (s *service) callPythonTranscribe(audioURL string) (string, error) {
         "file_url": audioURL,
     })
 
-    // Gửi POST request tới FastAPI
-    resp, err := http.Post("http://localhost:8000/transcribe", "application/json", bytes.NewBuffer(reqBody))
+    pyServiceURL := os.Getenv("PY_SERVICE_URL")
+    if pyServiceURL == "" {
+        pyServiceURL = "http://localhost:8000"
+    }
+
+    if pyServiceURL[len(pyServiceURL)-len("/transcribe"):] != "/transcribe" {
+        pyServiceURL = pyServiceURL + "/transcribe"
+    }
+
+    resp, err := http.Post(pyServiceURL, "application/json", bytes.NewBuffer(reqBody))
     if err != nil {
         return "", fmt.Errorf("failed to call python service: %w", err)
     }
     defer resp.Body.Close()
 
-    // Đọc response
     var result struct {
         Transcript string `json:"transcript"`
         Error      string `json:"error"`

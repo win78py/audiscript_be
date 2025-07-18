@@ -26,7 +26,6 @@ func (h *Handler) Transcribe(c *gin.Context) {
 		return
 	}
 
-	// Mở file trực tiếp từ multipart (stream)
 	file, err := fileHeader.Open()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not open uploaded file"})
@@ -44,7 +43,6 @@ func (h *Handler) Transcribe(c *gin.Context) {
 
 	log.Printf("Uploading audio (stream): %s", fileHeader.Filename)
 
-	// Gọi service: truyền stream và filename
 	if err := h.svc.TranscribeStream(audio, file, fileHeader.Filename); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
