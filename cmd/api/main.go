@@ -5,54 +5,88 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"audiscript_be/internal/server"
+	"audiscript_be/config"
+
+	"audiscript_be/database"
+	"audiscript_be/internal/app"
+	"audiscript_be/internal/cloudinary"
+	"audiscript_be/internal/middleware"
+	"audiscript_be/internal/routes"
+
+	"github.com/gin-gonic/gin"
+	// _ "github.com/joho/godotenv/autoload"
+	// "audiscript_be/config"
 )
 
-func gracefulShutdown(apiServer *http.Server, done chan bool) {
-	// Create context that listens for the interrupt signal from the OS.
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
+func main() {
+	config.LoadConfig()
+	// 1. Load PORT từ env
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
 
-	// Listen for the interrupt signal.
-	<-ctx.Done()
+	dbSvc := database.New()
+	defer dbSvc.Close()
+	db := dbSvc.DB()
 
-	log.Println("shutting down gracefully, press Ctrl+C again to force")
-	stop() // Allow Ctrl+C to force shutdown
+	// Khởi tạo engine “trống”
+	r := gin.New()
 
-	// The context is used to inform the server it has 5 seconds to finish
-	// the request it is currently handling
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := apiServer.Shutdown(ctx); err != nil {
-		log.Printf("Server forced to shutdown with error: %v", err)
+	// 1) Mặc định Gin không có Logger/Recovery, nên ta phải thêm
+	r.Use(gin.Logger())
+	r.Use(gin.Recovery())
+
+	// 2) Thêm CORS custom của mày
+	r.Use(middleware.CORSMiddleware())
+    r.MaxMultipartMemory = 100 << 20
+	// Khởi tạo Cloudinary service
+	cldConfig := cloudinary.LoadConfig()
+	cldClient, err := cloudinary.NewClient(cldConfig)
+	if err != nil {
+		log.Fatalf("Failed to create Cloudinary client: %v", err)
+	}
+	cldSvc := cloudinary.NewService(cldClient)
+
+	deps := &app.AppDependencies{
+		DB:         db,
+		Cloudinary: cldSvc,
+	}
+	routes.RegisterAll(r, deps)
+
+	// 4. Tạo HTTP Server
+	srv := &http.Server{
+		Addr:         fmt.Sprintf(":%s", port),
+		Handler:      r,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  time.Minute,
+	}
+
+	// 5. Graceful shutdown
+	go func() {
+		quit := make(chan os.Signal, 1)
+		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+		<-quit
+		log.Println("Shutting down server...")
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(ctx); err != nil {
+			log.Fatalf("Server forced to shutdown: %v", err)
+		}
+	}()
+
+	// 6. Run
+	log.Printf("Server is running at port %s", port)
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatalf("Listen: %s\n", err)
 	}
 
 	log.Println("Server exiting")
-
-	// Notify the main goroutine that the shutdown is complete
-	done <- true
-}
-
-func main() {
-
-	server := server.NewServer()
-
-	// Create a done channel to signal when the shutdown is complete
-	done := make(chan bool, 1)
-
-	// Run graceful shutdown in a separate goroutine
-	go gracefulShutdown(server, done)
-
-	err := server.ListenAndServe()
-	if err != nil && err != http.ErrServerClosed {
-		panic(fmt.Sprintf("http server error: %s", err))
-	}
-
-	// Wait for the graceful shutdown to complete
-	<-done
-	log.Println("Graceful shutdown complete.")
 }
