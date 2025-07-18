@@ -24,6 +24,7 @@ import (
 )
 
 func main() {
+	fmt.Println("PATH:", os.Getenv("PATH"))
 	config.LoadConfig()
 	// 1. Load PORT từ env
 	port := os.Getenv("PORT")

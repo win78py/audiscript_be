@@ -50,7 +50,7 @@ func (s *service) TranscribeStream(t *Audio, file io.Reader, filename string) er
 }
 
 func (s *service) callPythonTranscribe(audioURL string) (string, error) {
-    cmd := exec.Command("python", "internal/transcribe/transcribe.py", audioURL)
+    cmd := exec.Command("python3", "internal/transcribe/transcribe.py", audioURL)
     var out bytes.Buffer
     cmd.Stdout = &out
     cmd.Stderr = nil
