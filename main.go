@@ -47,8 +47,7 @@ func main() {
 	r.Use(middleware.CORSMiddleware())
     r.MaxMultipartMemory = 100 << 20
 	// Khởi tạo Cloudinary service
-	cldConfig := cloudinary.LoadConfig()
-	cldClient, err := cloudinary.NewClient(cldConfig)
+	cldClient, err := cloudinary.NewClient(config.AppConfig.Cloudinary)
 	if err != nil {
 		log.Fatalf("Failed to create Cloudinary client: %v", err)
 	}

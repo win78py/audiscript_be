@@ -11,8 +11,8 @@ import (
 
 func RegisterAll(r *gin.Engine, deps *app.AppDependencies) {
     // CORS, Recovery, Logging… nếu cần
-    transcribeGroup := r.Group("/transcribe")
-    transcribe.Register(transcribeGroup, deps)
+    audioGroup := r.Group("/audio")
+    transcribe.Register(audioGroup, deps)
 
 	healthGroup := r.Group("/health")
     health.Register(healthGroup, deps.DB)

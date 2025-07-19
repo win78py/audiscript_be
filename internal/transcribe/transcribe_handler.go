@@ -53,3 +53,22 @@ func (h *Handler) Transcribe(c *gin.Context) {
 		"file_url": audio.FileURL,
 	})
 }
+
+func (h *Handler) ListAudio(c *gin.Context) {
+    audios, err := h.svc.GetAllAudio()
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+    c.JSON(http.StatusOK, audios)
+}
+
+func (h *Handler) GetAudio(c *gin.Context) {
+    id := c.Param("id")
+    audio, err := h.svc.GetAudioByID(id)
+    if err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "Audio not found"})
+        return
+    }
+    c.JSON(http.StatusOK, audio)
+}

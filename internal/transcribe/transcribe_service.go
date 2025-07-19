@@ -14,6 +14,8 @@ import (
 
 type Service interface {
 	TranscribeStream(t *Audio, file io.Reader, filename string) error
+	GetAllAudio() ([]Audio, error)
+	GetAudioByID(id string) (*Audio, error)
 }
 
 
@@ -65,6 +67,8 @@ func (s *service) callPythonTranscribe(audioURL string) (string, error) {
         pyServiceURL = pyServiceURL + "/transcribe"
     }
 
+    log.Printf("Calling Python service at: %s", pyServiceURL)
+
     resp, err := http.Post(pyServiceURL, "application/json", bytes.NewBuffer(reqBody))
     if err != nil {
         return "", fmt.Errorf("failed to call python service: %w", err)
@@ -82,4 +86,12 @@ func (s *service) callPythonTranscribe(audioURL string) (string, error) {
         return "", fmt.Errorf("python service error: %s", result.Error)
     }
     return result.Transcript, nil
+}
+
+func (s *service) GetAllAudio() ([]Audio, error) {
+    return s.repo.GetAll(context.Background())
+}
+
+func (s *service) GetAudioByID(id string) (*Audio, error) {
+    return s.repo.GetByID(context.Background(), id)
 }

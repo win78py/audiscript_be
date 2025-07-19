@@ -11,5 +11,7 @@ func Register(r *gin.RouterGroup, deps *app.AppDependencies) {
     svc := NewService(repo, deps.Cloudinary)
     h := NewHandler(svc)
 
-    r.POST("", h.Transcribe)
+    r.POST("/transcribe", h.Transcribe)
+    r.GET("/", h.ListAudio)
+    r.GET("/:id", h.GetAudio)
 }
