@@ -18,8 +18,6 @@ func NewHandler(svc Service) *Handler {
 }
 
 func (h *Handler) Transcribe(c *gin.Context) {
-	title := c.PostForm("title")
-
 	fileHeader, err := c.FormFile("file_url")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "File is required"})
@@ -35,7 +33,7 @@ func (h *Handler) Transcribe(c *gin.Context) {
 
 	audio := &Audio{
 		ID:            uuid.New().String(),
-		Title:         title,
+		Title:         fileHeader.Filename,
 		FileURL:       "",
 		CreatedAt:     time.Now(),
 		CreatedUpdate: time.Now(),
