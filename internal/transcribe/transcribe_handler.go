@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 	"time"
-
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -42,6 +41,7 @@ func (h *Handler) Transcribe(c *gin.Context) {
 	log.Printf("Uploading audio (stream): %s", fileHeader.Filename)
 
 	if err := h.svc.TranscribeStream(audio, file, fileHeader.Filename); err != nil {
+		log.Printf("Handler error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
