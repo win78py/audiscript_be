@@ -2,6 +2,7 @@ package transcribe
 
 import (
 	"audiscript_be/internal/cloudinary"
+	"audiscript_be/pkg/util"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -10,10 +11,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 type Service interface {
-	TranscribeStream(t *Audio, file io.Reader, filename string) error
+	TranscribeStream(t *Audio, file io.Reader, filename string, fileSize int64) error
 	GetAllAudio() ([]Audio, error)
 	GetAudioByID(id string) (*Audio, error)
 }
@@ -28,7 +30,7 @@ func NewService(r Repository, c cloudinary.Service) Service {
     return &service{repo: r, cld: c}
 }
 
-func (s *service) TranscribeStream(t *Audio, file io.Reader, filename string) error {
+func (s *service) TranscribeStream(t *Audio, file io.Reader, filename string, fileSize int64) error {
     log.Printf("Transcribing audio: %s", filename)
 
     // 1. Upload file lên Cloudinary
@@ -40,10 +42,11 @@ func (s *service) TranscribeStream(t *Audio, file io.Reader, filename string) er
     log.Printf("Uploaded audio to Cloudinary: %s", url)
 
     // 2. Gọi HTTP tới Python service để transcribe
-    transcript, err := s.callPythonTranscribe(url)
+    transcript, err := s.callPythonTranscribe(url, fileSize)
     if err != nil {
         log.Printf("Transcription failed: %v", err)
         t.Transcript = ""
+        return err
     } else {
         t.Transcript = transcript
     }
@@ -52,7 +55,7 @@ func (s *service) TranscribeStream(t *Audio, file io.Reader, filename string) er
     return s.repo.Save(context.Background(), t)
 }
 
-func (s *service) callPythonTranscribe(audioURL string) (string, error) {
+func (s *service) callPythonTranscribe(audioURL string, fileSize int64) (string, error) {
     // Chuẩn bị body JSON
     reqBody, _ := json.Marshal(map[string]string{
         "file_url": audioURL,
@@ -67,25 +70,48 @@ func (s *service) callPythonTranscribe(audioURL string) (string, error) {
         pyServiceURL = pyServiceURL + "/transcribe"
     }
 
-    log.Printf("Calling Python service at: %s", pyServiceURL)
+    // log.Printf("Calling Python service at: %s", pyServiceURL)
+    // Tạo HTTP Client với timeout
+	client := util.DefaultHTTPClient
 
-    resp, err := http.Post(pyServiceURL, "application/json", bytes.NewBuffer(reqBody))
-    if err != nil {
-        return "", fmt.Errorf("failed to call python service: %w", err)
+    var timeout time.Duration
+    switch {
+    case fileSize > 8000*1024:
+        timeout = 120 * time.Second
+    case fileSize > 2000*1024:
+        timeout = 60 * time.Second
+    default:
+        timeout = 30 * time.Second
     }
-    defer resp.Body.Close()
+	// Gửi request có context timeout
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+    defer cancel()
 
-    var result struct {
-        Transcript string `json:"transcript"`
-        Error      string `json:"error"`
-    }
-    if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-        return "", fmt.Errorf("failed to decode python service response: %w", err)
-    }
-    if result.Error != "" {
-        return "", fmt.Errorf("python service error: %s", result.Error)
-    }
-    return result.Transcript, nil
+    req, err := http.NewRequestWithContext(ctx, "POST", pyServiceURL, bytes.NewBuffer(reqBody))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to call python service: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		Transcript string `json:"transcript"`
+		Error      string `json:"error"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	if result.Error != "" {
+		return "", fmt.Errorf("python service error: %s", result.Error)
+	}
+	return result.Transcript, nil
 }
 
 func (s *service) GetAllAudio() ([]Audio, error) {

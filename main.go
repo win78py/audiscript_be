@@ -45,6 +45,7 @@ func main() {
 
 	// 2) Thêm CORS custom của mày
 	r.Use(middleware.CORSMiddleware())
+
     r.MaxMultipartMemory = 100 << 20
 	// Khởi tạo Cloudinary service
 	cldClient, err := cloudinary.NewClient(config.AppConfig.Cloudinary)
@@ -63,7 +64,7 @@ func main() {
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%s", port),
 		Handler:      r,
-		ReadTimeout:  10 * time.Second,
+		ReadTimeout:  20 * time.Second,
 		WriteTimeout: 60 * time.Second,
 		IdleTimeout:  time.Minute,
 	}

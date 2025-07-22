@@ -1,9 +1,13 @@
 package transcribe
 
 import (
+	"context"
+	"errors"
 	"log"
 	"net/http"
+	"strings"
 	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -40,9 +44,16 @@ func (h *Handler) Transcribe(c *gin.Context) {
 
 	log.Printf("Uploading audio (stream): %s", fileHeader.Filename)
 
-	if err := h.svc.TranscribeStream(audio, file, fileHeader.Filename); err != nil {
+	if err := h.svc.TranscribeStream(audio, file, fileHeader.Filename, fileHeader.Size); err != nil {
 		log.Printf("Handler error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "timeout") {
+			c.JSON(http.StatusGatewayTimeout, gin.H{
+				"error":   "Transcribe timeout",
+				"details": err.Error(),
+			})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
 		return
 	}
 
@@ -54,20 +65,20 @@ func (h *Handler) Transcribe(c *gin.Context) {
 }
 
 func (h *Handler) ListAudio(c *gin.Context) {
-    audios, err := h.svc.GetAllAudio()
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        return
-    }
-    c.JSON(http.StatusOK, audios)
+	audios, err := h.svc.GetAllAudio()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, audios)
 }
 
 func (h *Handler) GetAudio(c *gin.Context) {
-    id := c.Param("id")
-    audio, err := h.svc.GetAudioByID(id)
-    if err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "Audio not found"})
-        return
-    }
-    c.JSON(http.StatusOK, audio)
+	id := c.Param("id")
+	audio, err := h.svc.GetAudioByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Audio not found"})
+		return
+	}
+	c.JSON(http.StatusOK, audio)
 }
