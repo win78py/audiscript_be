@@ -77,7 +77,9 @@ func (s *service) callPythonTranscribe(audioURL string, fileSize int64) (string,
     var timeout time.Duration
     switch {
     case fileSize > 8000*1024:
-        timeout = 120 * time.Second
+        timeout = 999 * time.Second
+    case fileSize > 5000*1024:
+        timeout = 80 * time.Second
     case fileSize > 2000*1024:
         timeout = 60 * time.Second
     default:
