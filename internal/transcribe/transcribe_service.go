@@ -87,9 +87,11 @@ func (s *service) callPythonTranscribe(audioURL string, fileSize int64) (string,
     // }
 	// Gửi request có context timeout
 
-    var timeout time.Duration = 999999 * time.Second
+    var timeout time.Duration = 5 * time.Minute
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
     defer cancel()
+    
+    start := time.Now() 
 
     req, err := http.NewRequestWithContext(ctx, "POST", pyServiceURL, bytes.NewBuffer(reqBody))
 	if err != nil {
@@ -98,6 +100,8 @@ func (s *service) callPythonTranscribe(audioURL string, fileSize int64) (string,
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := client.Do(req)
+    elapsed := time.Since(start)
+    log.Printf("callPythonTranscribe: request took %v", elapsed)
 	if err != nil {
 		return "", fmt.Errorf("failed to call python service: %w", err)
 	}
