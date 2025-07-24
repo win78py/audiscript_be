@@ -6,5 +6,5 @@ import (
 )
 
 var DefaultHTTPClient = &http.Client{
-    Timeout: 60 * time.Second,
+    Timeout: 5 * time.Minute,
 }
