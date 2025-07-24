@@ -60,6 +60,7 @@ func (h *Handler) Transcribe(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message":  "Transcribe successful",
 		"id":       audio.ID,
+		"title":    audio.Title,
 		"file_url": audio.FileURL,
 	})
 }
