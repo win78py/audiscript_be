@@ -74,18 +74,20 @@ func (s *service) callPythonTranscribe(audioURL string, fileSize int64) (string,
     // Tạo HTTP Client với timeout
 	client := util.DefaultHTTPClient
 
-    var timeout time.Duration
-    switch {
-    case fileSize > 8000*1024:
-        timeout = 999 * time.Second
-    case fileSize > 5000*1024:
-        timeout = 80 * time.Second
-    case fileSize > 2000*1024:
-        timeout = 60 * time.Second
-    default:
-        timeout = 30 * time.Second
-    }
+    // var timeout time.Duration
+    // switch {
+    // case fileSize > 8000*1024:
+    //     timeout = 999 * time.Second
+    // case fileSize > 5000*1024:
+    //     timeout = 80 * time.Second
+    // case fileSize > 2000*1024:
+    //     timeout = 60 * time.Second
+    // default:
+    //     timeout = 30 * time.Second
+    // }
 	// Gửi request có context timeout
+
+    var timeout time.Duration = 999999 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
     defer cancel()
 

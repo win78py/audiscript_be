@@ -28,6 +28,7 @@ func (s *service) UploadAudio(ctx context.Context, file io.Reader, filename stri
 	uploadResult, err := s.client.Client.Upload.Upload(ctx, file, uploader.UploadParams{
 		PublicID:     publicID,
 		ResourceType: "auto",
+		Folder:       "audiscript/audio",
 	})
 	if err != nil {
 		return "", fmt.Errorf("upload failed: %w", err)
