@@ -1,17 +1,16 @@
 package transcribe
 
 import (
-	"audiscript_be/internal/app"
+	"audiscript_be/config"
+	"audiscript_be/pkg/jwt"
 
 	"github.com/gin-gonic/gin"
 )
 
-func Register(r *gin.RouterGroup, deps *app.AppDependencies) {
-    repo := NewRepository(deps.DB)
-    svc := NewService(repo, deps.Cloudinary)
+func Register(r *gin.Engine, svc Service) {
     h := NewHandler(svc)
-
-    r.POST("/transcribe", h.Transcribe)
-    r.GET("/", h.ListAudio)
-    r.GET("/:id", h.GetAudio)
+    audioGroup := r.Group("/audio")
+    audioGroup.POST("/transcribe", h.Transcribe)
+    audioGroup.GET("/", jwt.AuthGuard(config.AppConfig.JWT.Secret), h.ListAudio)
+    audioGroup.GET("/:id", h.GetAudio)
 }

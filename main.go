@@ -14,7 +14,6 @@ import (
 
 	"audiscript_be/database"
 	"audiscript_be/internal/app"
-	"audiscript_be/internal/cloudinary"
 	"audiscript_be/internal/middleware"
 	"audiscript_be/internal/routes"
 
@@ -32,9 +31,8 @@ func main() {
 		port = "8080"
 	}
 
-	dbSvc := database.New()
-	defer dbSvc.Close()
-	db := dbSvc.DB()
+	deps := app.NewDependencies()
+	defer database.New().Close()
 
 	// Khởi tạo engine “trống”
 	r := gin.New()
@@ -47,17 +45,7 @@ func main() {
 	r.Use(middleware.CORSMiddleware())
 
     r.MaxMultipartMemory = 100 << 20
-	// Khởi tạo Cloudinary service
-	cldClient, err := cloudinary.NewClient(config.AppConfig.Cloudinary)
-	if err != nil {
-		log.Fatalf("Failed to create Cloudinary client: %v", err)
-	}
-	cldSvc := cloudinary.NewService(cldClient)
-
-	deps := &app.AppDependencies{
-		DB:         db,
-		Cloudinary: cldSvc,
-	}
+	// 3) Thêm các route
 	routes.RegisterAll(r, deps)
 
 	// 4. Tạo HTTP Server

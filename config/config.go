@@ -1,10 +1,11 @@
 package config
 
 import (
-    "log"
-    "os"
+	"fmt"
+	"log"
+	"os"
 
-    "github.com/joho/godotenv"
+	"github.com/joho/godotenv"
 )
 
 type DBConfig struct {
@@ -23,10 +24,19 @@ type CloudinaryConfig struct {
     APISecret string
 }
 
+
+type JWTConfig struct {
+    Secret        string
+    AccessExpiry  int // phút
+    RefreshExpiry int // giờ
+}
+
 type Config struct {
     DB         DBConfig
     Cloudinary CloudinaryConfig
+    JWT        JWTConfig
 }
+
 
 var AppConfig *Config
 
@@ -48,7 +58,25 @@ func LoadConfig() {
             APIKey:    os.Getenv("CLOUDINARY_API_KEY"),
             APISecret: os.Getenv("CLOUDINARY_API_SECRET"),
         },
+        JWT: JWTConfig{
+            Secret:        os.Getenv("JWT_SECRET"),
+            AccessExpiry:  getEnvAsInt("JWT_ACCESS_EXPIRY", 15),
+            RefreshExpiry: getEnvAsInt("JWT_REFRESH_EXPIRY", 168),
+        },
     }
 
     log.Println("✅ Config loaded")
+}
+
+func getEnvAsInt(name string, defaultVal int) int {
+    valStr := os.Getenv(name)
+    if valStr == "" {
+        return defaultVal
+    }
+    var val int
+    _, err := fmt.Sscanf(valStr, "%d", &val)
+    if err != nil {
+        return defaultVal
+    }
+    return val
 }
