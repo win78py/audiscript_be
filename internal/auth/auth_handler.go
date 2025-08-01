@@ -46,7 +46,7 @@ func (h *Handler) Login(c *gin.Context) {
 	resp := map[string]interface{}{  
 		"token":        access,
 		"refreshToken": refresh,
-		"user": map[string]interface{}{  
+		"customer": map[string]interface{}{  
 			"id":    user.ID,
 			"email": user.Email,
 			"ip":    c.ClientIP(),
