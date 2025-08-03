@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"audiscript_be/internal/models"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -34,7 +35,7 @@ func (h *Handler) Transcribe(c *gin.Context) {
 	}
 	defer file.Close()
 
-	audio := &Audio{
+	audio := &models.Audio{
 		ID:            uuid.New().String(),
 		Title:         fileHeader.Filename,
 		FileURL:       "",

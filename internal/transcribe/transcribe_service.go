@@ -3,6 +3,7 @@ package transcribe
 import (
 	"audiscript_be/internal/cloudinary"
 	"audiscript_be/pkg/util"
+    "audiscript_be/internal/models"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -15,9 +16,9 @@ import (
 )
 
 type Service interface {
-	TranscribeStream(t *Audio, file io.Reader, filename string, fileSize int64) error
-	GetAllAudio() ([]Audio, error)
-	GetAudioByID(id string) (*Audio, error)
+	TranscribeStream(t *models.Audio, file io.Reader, filename string, fileSize int64) error
+	GetAllAudio() ([]models.Audio, error)
+	GetAudioByID(id string) (*models.Audio, error)
 }
 
 
@@ -30,7 +31,7 @@ func NewService(r Repository, c cloudinary.Service) Service {
     return &service{repo: r, cld: c}
 }
 
-func (s *service) TranscribeStream(t *Audio, file io.Reader, filename string, fileSize int64) error {
+func (s *service) TranscribeStream(t *models.Audio, file io.Reader, filename string, fileSize int64) error {
     log.Printf("Transcribing audio: %s", filename)
 
     // 1. Upload file lên Cloudinary
@@ -122,10 +123,10 @@ func (s *service) callPythonTranscribe(audioURL string, fileSize int64) (string,
 	return result.Transcript, nil
 }
 
-func (s *service) GetAllAudio() ([]Audio, error) {
+func (s *service) GetAllAudio() ([]models.Audio, error) {
     return s.repo.GetAll(context.Background())
 }
 
-func (s *service) GetAudioByID(id string) (*Audio, error) {
+func (s *service) GetAudioByID(id string) (*models.Audio, error) {
     return s.repo.GetByID(context.Background(), id)
 }

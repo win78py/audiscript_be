@@ -1,13 +1,16 @@
 package auth
 
-import "gorm.io/gorm"
+import (
+	"gorm.io/gorm"
+	"audiscript_be/internal/models"
+)
 
 // Repository interface
 type Repository interface {
-	CreateUser(user *User) error
-	GetUserByEmail(email string) (*User, error)
-	SaveRefreshToken(rt *RefreshToken) error
-	GetRefreshToken(token string) (*RefreshToken, error)
+	CreateUser(user *models.User) error
+	GetUserByEmail(email string) (*models.User, error)
+	SaveRefreshToken(rt *models.RefreshToken) error
+	GetRefreshToken(token string) (*models.RefreshToken, error)
 	DeleteRefreshToken(token string) error
 }
 
@@ -18,28 +21,28 @@ type gormRepository struct {
 
 // NewRepository khởi tạo repo
 func NewRepository(db *gorm.DB) Repository {
-	db.AutoMigrate(&User{}, &RefreshToken{})
+	db.AutoMigrate(&models.User{}, &models.RefreshToken{})
 	return &gormRepository{db}
 }
 
-func (r *gormRepository) CreateUser(user *User) error {
+func (r *gormRepository) CreateUser(user *models.User) error {
 	return r.db.Create(user).Error
 }
 
-func (r *gormRepository) GetUserByEmail(email string) (*User, error) {
-	var u User
+func (r *gormRepository) GetUserByEmail(email string) (*models.User, error) {
+	var u models.User
 	if err := r.db.Where("email = ?", email).First(&u).Error; err != nil {
 		return nil, err
 	}
 	return &u, nil
 }
 
-func (r *gormRepository) SaveRefreshToken(rt *RefreshToken) error {
+func (r *gormRepository) SaveRefreshToken(rt *models.RefreshToken) error {
 	return r.db.Create(rt).Error
 }
 
-func (r *gormRepository) GetRefreshToken(token string) (*RefreshToken, error) {
-	var rt RefreshToken
+func (r *gormRepository) GetRefreshToken(token string) (*models.RefreshToken, error) {
+	var rt models.RefreshToken
 	if err := r.db.Where("token = ?", token).First(&rt).Error; err != nil {
 		return nil, err
 	}
@@ -47,5 +50,5 @@ func (r *gormRepository) GetRefreshToken(token string) (*RefreshToken, error) {
 }
 
 func (r *gormRepository) DeleteRefreshToken(token string) error {
-	return r.db.Where("token = ?", token).Delete(&RefreshToken{}).Error
+	return r.db.Where("token = ?", token).Delete(&models.RefreshToken{}).Error
 }

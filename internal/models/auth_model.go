@@ -1,8 +1,9 @@
-package auth
+package models
 
 import (
-	"gorm.io/gorm"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 // User represents application user
@@ -17,6 +18,7 @@ type User struct {
 	CreatedAt    time.Time      `json:"createdAt"`
 	UpdatedAt    time.Time      `json:"updatedAt"`
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
+	Audios       []Audio        `gorm:"foreignKey:UserID" json:"audios,omitempty"`
 }
 
 // RefreshToken to support token revocation

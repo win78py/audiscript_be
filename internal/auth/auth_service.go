@@ -7,6 +7,7 @@ import (
 	"audiscript_be/config"
 	"audiscript_be/pkg/hash"
 	"audiscript_be/pkg/jwt"
+	"audiscript_be/internal/models"
 )
 
 var (
@@ -16,8 +17,8 @@ var (
 
 // Service interface
 type Service interface {
-	Register(email, password string) (*User, error)
-	Login(email, password string) (accessToken, refreshToken string, user *User, err error)
+	Register(email, password string) (*models.User, error)
+	Login(email, password string) (accessToken, refreshToken string, user *models.User, err error)
 	Refresh(oldToken string) (newAccess, newRefresh string, err error)
 }
 
@@ -30,19 +31,19 @@ func NewService(repo Repository) Service {
 	return &authService{repo}
 }
 
-func (s *authService) Register(email, password string) (*User, error) {
+func (s *authService) Register(email, password string) (*models.User, error) {
 	hashPwd, err := hash.HashPassword(password)
 	if err != nil {
 		return nil, err
 	}
-	user := &User{Email: email, Password: hashPwd}
+	user := &models.User{Email: email, Password: hashPwd}
 	if err := s.repo.CreateUser(user); err != nil {
 		return nil, err
 	}
 	return user, nil
 }
 
-func (s *authService) Login(email, password string) (string, string, *User, error) {
+func (s *authService) Login(email, password string) (string, string, *models.User, error) {
 	user, err := s.repo.GetUserByEmail(email)
 	if err != nil {
 		return "", "", nil, ErrInvalidCredentials
@@ -57,8 +58,8 @@ func (s *authService) Login(email, password string) (string, string, *User, erro
 	}
 	// save refresh to DB
 	exp := time.Now().Add(time.Duration(config.AppConfig.JWT.RefreshExpiry) * time.Hour)
-	rt := &RefreshToken{Token: refresh, UserID: user.ID, ExpiresAt: exp}
-    _ = s.repo.SaveRefreshToken(rt)
+	rt := &models.RefreshToken{Token: refresh, UserID: user.ID, ExpiresAt: exp}
+	_ = s.repo.SaveRefreshToken(rt)
 	return access, refresh, user, nil
 }
 
@@ -79,6 +80,6 @@ func (s *authService) Refresh(oldToken string) (string, string, error) {
 	// revoke old, save new
 	_ = s.repo.DeleteRefreshToken(oldToken)
 	exp := time.Now().Add(time.Duration(config.AppConfig.JWT.RefreshExpiry) * time.Hour)
-	_ = s.repo.SaveRefreshToken(&RefreshToken{Token: newRefresh, UserID: claims.UserID, ExpiresAt: exp})
+	_ = s.repo.SaveRefreshToken(&models.RefreshToken{Token: newRefresh, UserID: claims.UserID, ExpiresAt: exp})
 	return newAccess, newRefresh, nil
 }
