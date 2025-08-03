@@ -48,6 +48,8 @@ func (h *Handler) Login(c *gin.Context) {
 		"refreshToken": refresh,
 		"customer": map[string]interface{}{  
 			"id":    user.ID,
+			"username": user.Username,
+			"profileImage": user.ProfileImage,
 			"email": user.Email,
 			"ip":    c.ClientIP(),
 		},
