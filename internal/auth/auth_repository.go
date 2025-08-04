@@ -12,6 +12,7 @@ type Repository interface {
 	SaveRefreshToken(rt *models.RefreshToken) error
 	GetRefreshToken(token string) (*models.RefreshToken, error)
 	DeleteRefreshToken(token string) error
+	GetUserByID(id string) (*models.User, error)
 }
 
 // GORM implementation
@@ -27,6 +28,14 @@ func NewRepository(db *gorm.DB) Repository {
 
 func (r *gormRepository) CreateUser(user *models.User) error {
 	return r.db.Create(user).Error
+}
+
+func (r *gormRepository) GetUserByID(id string) (*models.User, error) {
+    var u models.User
+    if err := r.db.First(&u, id).Error; err != nil {
+        return nil, err
+    }
+    return &u, nil
 }
 
 func (r *gormRepository) GetUserByEmail(email string) (*models.User, error) {

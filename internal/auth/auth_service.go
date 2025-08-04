@@ -5,9 +5,11 @@ import (
 	"time"
 
 	"audiscript_be/config"
+	"audiscript_be/internal/models"
 	"audiscript_be/pkg/hash"
 	"audiscript_be/pkg/jwt"
-	"audiscript_be/internal/models"
+
+	"github.com/google/uuid"
 )
 
 var (
@@ -20,6 +22,7 @@ type Service interface {
 	Register(email, password string) (*models.User, error)
 	Login(email, password string) (accessToken, refreshToken string, user *models.User, err error)
 	Refresh(oldToken string) (newAccess, newRefresh string, err error)
+	GetByID(id string) (*models.User, error)
 }
 
 // impl
@@ -36,7 +39,11 @@ func (s *authService) Register(email, password string) (*models.User, error) {
 	if err != nil {
 		return nil, err
 	}
-	user := &models.User{Email: email, Password: hashPwd}
+	user := &models.User{
+        ID:       uuid.New().String(),
+        Email:    email,
+        Password: hashPwd,
+    }
 	if err := s.repo.CreateUser(user); err != nil {
 		return nil, err
 	}
@@ -82,4 +89,8 @@ func (s *authService) Refresh(oldToken string) (string, string, error) {
 	exp := time.Now().Add(time.Duration(config.AppConfig.JWT.RefreshExpiry) * time.Hour)
 	_ = s.repo.SaveRefreshToken(&models.RefreshToken{Token: newRefresh, UserID: claims.UserID, ExpiresAt: exp})
 	return newAccess, newRefresh, nil
+}
+
+func (s *authService) GetByID(id string) (*models.User, error) {
+    return s.repo.GetUserByID(id)
 }

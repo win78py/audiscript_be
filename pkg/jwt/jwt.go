@@ -10,12 +10,12 @@ import (
 
 // Claims chứa thông tin mã hóa trong JWT
 type Claims struct {
-	UserID uint `json:"user_id"`
+	UserID string `json:"user_id"`
 	jwt.RegisteredClaims
 }
 
 // GenerateTokens trả về access & refresh token
-func GenerateTokens(userID uint) (accessToken, refreshToken string, err error) {
+func GenerateTokens(userID string) (accessToken, refreshToken string, err error) {
 	cfg := config.AppConfig.JWT
 
 	// Access Token

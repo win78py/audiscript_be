@@ -8,7 +8,7 @@ import (
 
 // User represents application user
 type User struct {
-	ID           uint           `gorm:"primaryKey" json:"id"`
+	ID           string         `gorm:"type:uuid;primaryKey" json:"id"`
 	Username     string         `json:"username"`
 	FirstName    string         `json:"firstName"`
 	LastName     string         `json:"lastName"`
@@ -25,7 +25,7 @@ type User struct {
 type RefreshToken struct {
 	ID        uint      `gorm:"primaryKey"`
 	Token     string    `gorm:"unique;not null"`
-	UserID    uint      `gorm:"index;not null"`
+	UserID    string      `gorm:"index;not null"`
 	ExpiresAt time.Time `gorm:"not null"`
 	CreatedAt time.Time
 }

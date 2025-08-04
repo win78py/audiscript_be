@@ -15,7 +15,6 @@ type Audio struct {
 	CreatedAt     time.Time      `json:"created_at"`
 	CreatedUpdate time.Time      `json:"created_update"`
 	CreatedDelete gorm.DeletedAt `gorm:"index" json:"-"`
-	UserID        uint           `gorm:"not null;index" json:"user_id"`
-	User          User      `gorm:"foreignKey:UserID" json:"-"` // Quan hệ với User|
-
+	UserID        string         `gorm:"type:uuid;index" json:"user_id"`
+	User          User           `gorm:"foreignKey:UserID" json:"-"`
 }

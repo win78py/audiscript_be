@@ -1,13 +1,15 @@
 package transcribe
 
 import (
+	// "audiscript_be/internal/auth"
+	"audiscript_be/internal/models"
+	"audiscript_be/pkg/pagination"
 	"context"
 	"errors"
 	"log"
 	"net/http"
 	"strings"
 	"time"
-	"audiscript_be/internal/models"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -15,6 +17,7 @@ import (
 
 type Handler struct {
 	svc Service
+	// authService auth.Service
 }
 
 func NewHandler(svc Service) *Handler {
@@ -33,6 +36,10 @@ func (h *Handler) Transcribe(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not open uploaded file"})
 		return
 	}
+	userID := c.PostForm("user_id")
+	if userID == "" || userID == "undefined" {
+		userID = ""
+	}
 	defer file.Close()
 
 	audio := &models.Audio{
@@ -41,6 +48,7 @@ func (h *Handler) Transcribe(c *gin.Context) {
 		FileURL:       "",
 		CreatedAt:     time.Now(),
 		CreatedUpdate: time.Now(),
+		UserID:        userID,
 	}
 
 	log.Printf("Uploading audio (stream): %s", fileHeader.Filename)
@@ -57,22 +65,44 @@ func (h *Handler) Transcribe(c *gin.Context) {
 		}
 		return
 	}
+	// user, err := h.authService.GetByID(*audio.UserID)
+	// if err != nil {
+	// 	c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+	// 	return
+	// }
+	// email := user.Email
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":  "Transcribe successful",
 		"id":       audio.ID,
 		"title":    audio.Title,
 		"file_url": audio.FileURL,
+		"user_id":  audio.UserID,
+		// "email":    email,
 	})
 }
 
 func (h *Handler) ListAudio(c *gin.Context) {
-	audios, err := h.svc.GetAllAudio()
+	var pageReq pagination.PageRequest
+	if err := c.ShouldBindQuery(&pageReq); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pagination parameters"})
+		return
+	}
+
+	userID := c.Query("user_id")
+	var userIDPtr *string
+	if userID != "" {
+		userIDPtr = &userID
+	}
+	log.Printf("Listing audio for user: %s, page: %d, limit: %d", userID, pageReq.Page, pageReq.Limit)
+
+	result, err := h.svc.ListAudio(c.Request.Context(), pageReq.Page, pageReq.Limit, userIDPtr)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, audios)
+
+	c.JSON(http.StatusOK, result)
 }
 
 func (h *Handler) GetAudio(c *gin.Context) {
