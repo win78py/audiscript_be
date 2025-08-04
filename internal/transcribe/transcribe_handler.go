@@ -94,37 +94,34 @@ func (h *Handler) CreateAudio(c *gin.Context) {
 }
 
 func (h *Handler) Transcribe(c *gin.Context) {
-	audioURL := c.PostForm("file_url")
-	language := c.PostForm("language")
-	audioID := c.PostForm("audio_id")
+    var req TranscribeRequest
+    if err := c.ShouldBindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "details": err.Error()})
+        return
+    }
 
-	if audioURL == "" || audioID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "file_url and audio_id are required"})
-		return
-	}
+    transcript, err := h.svc.Transcribe(req.FileURL, req.Language)
+    if err != nil {
+        if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "timeout") {
+            c.JSON(http.StatusGatewayTimeout, gin.H{
+                "error":   "Transcribe timeout",
+                "details": err.Error(),
+            })
+        } else {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        }
+        return
+    }
 
-	transcript, err := h.svc.Transcribe(audioURL, language)
-	if err != nil {
-		if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "timeout") {
-			c.JSON(http.StatusGatewayTimeout, gin.H{
-				"error":   "Transcribe timeout",
-				"details": err.Error(),
-			})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		}
-		return
-	}
+    if err := h.svc.UpdateTranscript(req.AudioID, transcript, req.Language); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update transcript"})
+        return
+    }
 
-	if err := h.svc.UpdateTranscript(audioID, transcript, language); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update transcript"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"transcript": transcript,
-		"language":   language,
-	})
+    c.JSON(http.StatusOK, gin.H{
+        "transcript": transcript,
+        "language":   req.Language,
+    })
 }
 
 func (h *Handler) ListAudio(c *gin.Context) {
