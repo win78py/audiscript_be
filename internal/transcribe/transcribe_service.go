@@ -17,7 +17,9 @@ import (
 )
 
 type Service interface {
-	TranscribeStream(t *models.Audio, file io.Reader, filename string, fileSize int64) error
+	CreateAudio(t *models.Audio, file io.Reader, filename string, fileSize int64) error
+	Transcribe(audioURL string, language string) (string, error)
+    UpdateTranscript(audioID string, transcript string, language string) error
 	GetAudioByID(id string) (*models.Audio, error)
 	ListAudio(ctx context.Context, page, limit int, userID *string) (*pagination.PageResponse[models.Audio], error)
 }
@@ -31,7 +33,7 @@ func NewService(r Repository, c cloudinary.Service) Service {
 	return &service{repo: r, cld: c}
 }
 
-func (s *service) TranscribeStream(t *models.Audio, file io.Reader, filename string, fileSize int64) error {
+func (s *service) CreateAudio(t *models.Audio, file io.Reader, filename string, fileSize int64) error {
 	log.Printf("Transcribing audio: %s", filename)
 
 	// 1. Upload file lên Cloudinary
@@ -43,24 +45,24 @@ func (s *service) TranscribeStream(t *models.Audio, file io.Reader, filename str
 	log.Printf("Uploaded audio to Cloudinary: %s", url)
 
 	// 2. Gọi HTTP tới Python service để transcribe
-	transcript, err := s.callPythonTranscribe(url, fileSize)
-	if err != nil {
-		log.Printf("Transcription failed: %v", err)
-		t.Transcript = ""
-		return err
-	} else {
-		t.Transcript = transcript
-	}
+	// transcript, err := s.callPythonTranscribe(url, fileSize)
+	// if err != nil {
+	// 	log.Printf("Transcription failed: %v", err)
+	// 	t.Transcript = ""
+	// 	return err
+	// } else {
+	// 	t.Transcript = transcript
+	// }
 
 	// 3. Lưu vào database
 	return s.repo.Save(context.Background(), t)
 }
 
-func (s *service) callPythonTranscribe(audioURL string, fileSize int64) (string, error) {
-	// Chuẩn bị body JSON
+func (s *service) Transcribe(audioURL string, language string) (string, error) {
 	reqBody, _ := json.Marshal(map[string]string{
-		"file_url": audioURL,
-	})
+        "file_url": audioURL,
+        "language": language,
+    })
 
 	pyServiceURL := os.Getenv("PY_SERVICE_URL")
 	if pyServiceURL == "" {
@@ -121,6 +123,10 @@ func (s *service) callPythonTranscribe(audioURL string, fileSize int64) (string,
 		return "", fmt.Errorf("python service error: %s", result.Error)
 	}
 	return result.Transcript, nil
+}
+
+func (s *service) UpdateTranscript(audioID string, transcript string, language string) error {
+    return s.repo.UpdateTranscript(audioID, transcript, language)
 }
 
 func (s *service) ListAudio(ctx context.Context, page, limit int, userID *string) (*pagination.PageResponse[models.Audio], error) {

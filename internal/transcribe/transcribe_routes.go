@@ -10,6 +10,7 @@ import (
 func Register(r *gin.Engine, svc Service) {
     h := NewHandler(svc)
     audioGroup := r.Group("/audio")
+    audioGroup.POST("/create", h.CreateAudio)
     audioGroup.POST("/transcribe", h.Transcribe)
     audioGroup.GET("/", h.ListAudio)
     // audioGroup.GET("/", jwt.AuthGuard(config.AppConfig.JWT.Secret), h.ListAudio)

@@ -24,7 +24,7 @@ func NewHandler(svc Service) *Handler {
 	return &Handler{svc: svc}
 }
 
-func (h *Handler) Transcribe(c *gin.Context) {
+func (h *Handler) CreateAudio(c *gin.Context) {
 	fileHeader, err := c.FormFile("file_url")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "File is required"})
@@ -37,27 +37,35 @@ func (h *Handler) Transcribe(c *gin.Context) {
 		return
 	}
 	userID := c.PostForm("user_id")
-	if userID == "" || userID == "undefined" {
-		userID = ""
+	var userIDPtr *string
+	if userID != "" && userID != "undefined" {
+		userIDPtr = &userID
+	} else {
+		userIDPtr = nil
 	}
+	tags := c.PostFormArray("tags")
 	defer file.Close()
 
 	audio := &models.Audio{
 		ID:            uuid.New().String(),
 		Title:         fileHeader.Filename,
 		FileURL:       "",
+		Transcript:    "",
+		FileSize:      fileHeader.Size,
+		Language:      "",
+		Tags:          tags,
 		CreatedAt:     time.Now(),
 		CreatedUpdate: time.Now(),
-		UserID:        userID,
+		UserID:        userIDPtr,
 	}
 
 	log.Printf("Uploading audio (stream): %s", fileHeader.Filename)
 
-	if err := h.svc.TranscribeStream(audio, file, fileHeader.Filename, fileHeader.Size); err != nil {
+	if err := h.svc.CreateAudio(audio, file, fileHeader.Filename, fileHeader.Size); err != nil {
 		log.Printf("Handler error: %v", err)
 		if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "timeout") {
 			c.JSON(http.StatusGatewayTimeout, gin.H{
-				"error":   "Transcribe timeout",
+				"error":   "Create timeout",
 				"details": err.Error(),
 			})
 		} else {
@@ -73,12 +81,49 @@ func (h *Handler) Transcribe(c *gin.Context) {
 	// email := user.Email
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":  "Transcribe successful",
-		"id":       audio.ID,
-		"title":    audio.Title,
-		"file_url": audio.FileURL,
-		"user_id":  audio.UserID,
+		"message":   "Transcribe successful",
+		"id":        audio.ID,
+		"title":     audio.Title,
+		"file_url":  audio.FileURL,
+		"file_size": audio.FileSize,
+		"language":  audio.Language,
+		"tags":      audio.Tags,
+		"user_id":   audio.UserID,
 		// "email":    email,
+	})
+}
+
+func (h *Handler) Transcribe(c *gin.Context) {
+	audioURL := c.PostForm("file_url")
+	language := c.PostForm("language")
+	audioID := c.PostForm("audio_id")
+
+	if audioURL == "" || audioID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file_url and audio_id are required"})
+		return
+	}
+
+	transcript, err := h.svc.Transcribe(audioURL, language)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "timeout") {
+			c.JSON(http.StatusGatewayTimeout, gin.H{
+				"error":   "Transcribe timeout",
+				"details": err.Error(),
+			})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+
+	if err := h.svc.UpdateTranscript(audioID, transcript, language); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update transcript"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"transcript": transcript,
+		"language":   language,
 	})
 }
 
