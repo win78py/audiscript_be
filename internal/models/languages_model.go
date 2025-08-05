@@ -7,8 +7,7 @@ const (
 	// LanguageSpanish     = "es" // Español
 	LanguageJapanese    = "ja" // 日本語 (Nihongo)
 	LanguageKorean      = "ko" // 한국어 (Hangul)
-	LanguageChineseCN   = "zh-CN" // 中文 (简体, 中国)
-	// LanguageChineseTW   = "zh-TW" // 中文 (繁體, 台灣)
+	LanguageChinese     = "zh" // 中文 (简体, 中国)
 	// LanguageGerman      = "de" // Deutsch
 	AutoLanguageDetection = "auto"
 )
@@ -20,8 +19,7 @@ var ValidLanguages = []string{
 	// LanguageSpanish,
 	LanguageJapanese,
 	LanguageKorean,
-	LanguageChineseCN,
-	// LanguageChineseTW,
+	LanguageChinese,
 	// LanguageGerman,
 	AutoLanguageDetection,
 }
