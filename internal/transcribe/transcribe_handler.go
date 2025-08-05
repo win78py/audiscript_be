@@ -52,7 +52,7 @@ func (h *Handler) CreateAudio(c *gin.Context) {
 		FileURL:       "",
 		Transcript:    "",
 		FileSize:      fileHeader.Size,
-		Language:      "",
+		Language:      models.AutoLanguageDetection,
 		Tags:          tags,
 		CreatedAt:     time.Now(),
 		CreatedUpdate: time.Now(),
