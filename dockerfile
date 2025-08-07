@@ -1,26 +1,40 @@
-FROM golang:1.24 as builder
+# Build stage
+FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
+
+# Cài CA certificates để tránh lỗi TLS
+RUN apk update && apk add --no-cache ca-certificates
+
+# Copy go mod and sum, download deps
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
 COPY . .
-RUN go build -o app ./cmd/api/main.go
 
-FROM debian:bookworm-slim
+# Build binary
+RUN go build -o server main.go
 
-RUN apt-get update && apt-get install -y python3 python3-pip ffmpeg
-
-# Kiểm tra version
-RUN python3 --version && pip3 --version
-
-# Cài các thư viện Python cần thiết cho Whisper
-RUN pip3 install --no-cache-dir openai-whisper torch requests
-
-# Kiểm tra đã cài whisper chưa
-RUN python3 -c "import whisper; print('Whisper installed OK')"
+# Final stage
+FROM alpine:latest
 
 WORKDIR /app
-COPY --from=builder /app/app .
-COPY internal/transcribe/transcribe.py internal/transcribe/transcribe.py
 
+# Cài CA certificates ở runtime
+RUN apk update && apk add --no-cache ca-certificates
+
+# Copy binary từ builder
+COPY --from=builder /app/server .
+
+# Copy config nếu cần
+COPY --from=builder /app/config ./config
+
+# Expose port (Fly.io sẽ tự map)
 EXPOSE 8080
 
-CMD ["./app"]
+# Set env cho Fly.io
+ENV PORT=8080
+
+# Run app
+CMD ["./server"]
